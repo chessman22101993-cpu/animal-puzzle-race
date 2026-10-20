@@ -1,0 +1,347 @@
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+@keyframes bounce-subtle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+/* Natural forward-driving sprint: surges forward in direction of travel, leans into speed (Rightward facing) */
+@keyframes animal-sprint {
+  0% {
+    transform: translate(0px, 0px) rotate(3deg) scale(1.01, 0.99);
+  }
+  35% {
+    transform: translate(5px, -1.5px) rotate(5.5deg) scale(1.04, 0.96);
+  }
+  70% {
+    transform: translate(2.5px, -0.8px) rotate(4deg) scale(1.02, 0.98);
+  }
+  100% {
+    transform: translate(0px, 0px) rotate(3deg) scale(1.01, 0.99);
+  }
+}
+
+/* Leader sprint: stronger forward surge and aggressive sprint lean */
+@keyframes animal-sprint-leader {
+  0% {
+    transform: translate(0px, 0px) rotate(4deg) scale(1.02, 0.98);
+  }
+  35% {
+    transform: translate(7px, -2.5px) rotate(7.5deg) scale(1.06, 0.94);
+  }
+  70% {
+    transform: translate(3.5px, -1.2px) rotate(5.5deg) scale(1.03, 0.97);
+  }
+  100% {
+    transform: translate(0px, 0px) rotate(4deg) scale(1.02, 0.98);
+  }
+}
+
+/* Forward sprinting stride: horizontal surge + aerodynamic forward lean (no excessive up-down bouncing) */
+@keyframes animal-gallop {
+  0% {
+    transform: translate(0px, 0px) scale(1.03, 0.96) rotate(3deg);
+  }
+  30% {
+    transform: translate(4px, -2px) scale(0.98, 1.02) rotate(5deg);
+  }
+  65% {
+    transform: translate(2px, -1px) scale(1.01, 0.99) rotate(4deg);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1.03, 0.96) rotate(3deg);
+  }
+}
+
+/* Leader sprint: stronger forward surge and aggressive sprint lean */
+@keyframes animal-gallop-leader {
+  0% {
+    transform: translate(0px, 0px) scale(1.04, 0.95) rotate(4deg);
+  }
+  30% {
+    transform: translate(6px, -3px) scale(0.97, 1.03) rotate(7deg);
+  }
+  65% {
+    transform: translate(3px, -1.5px) scale(1.01, 0.99) rotate(5deg);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1.04, 0.95) rotate(4deg);
+  }
+}
+
+/* Ground shadow: subtle breathing sync under feet */
+@keyframes running-shadow {
+  0%, 100% {
+    transform: translateX(-50%) scale(1.08, 1.0);
+    opacity: 0.6;
+  }
+  30% {
+    transform: translateX(-40%) scale(0.9, 0.85);
+    opacity: 0.35;
+  }
+}
+
+/* Speed wind streaks streaming backwards */
+@keyframes speed-streak {
+  0% {
+    opacity: 0;
+    transform: translateX(0) scaleX(0.3);
+  }
+  40% {
+    opacity: 0.85;
+    transform: translateX(-12px) scaleX(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-24px) scaleX(1.5);
+  }
+}
+
+/* Bold white dashed track lines streaming backwards at relaxed, realistic half-speed */
+@keyframes track-road-scroll {
+  0% {
+    background-position-x: 0px;
+  }
+  100% {
+    background-position-x: -88px;
+  }
+}
+
+@keyframes slide-up {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.animate-shake {
+  animation: shake 0.4s ease-in-out;
+}
+
+.animate-bounce-subtle {
+  animation: bounce-subtle 1.2s infinite ease-in-out;
+}
+
+.animate-animal-sprint {
+  animation: animal-sprint 0.36s infinite cubic-bezier(0.35, 0.1, 0.25, 1);
+  transform-origin: bottom center;
+}
+
+.animate-animal-sprint-leader {
+  animation: animal-sprint-leader 0.32s infinite cubic-bezier(0.35, 0.1, 0.25, 1);
+  transform-origin: bottom center;
+}
+
+.animate-animal-gallop {
+  animation: animal-gallop 0.42s infinite cubic-bezier(0.4, 0, 0.6, 1);
+  transform-origin: bottom center;
+}
+
+.animate-animal-gallop-leader {
+  animation: animal-gallop-leader 0.38s infinite cubic-bezier(0.4, 0, 0.6, 1);
+  transform-origin: bottom center;
+}
+
+.animate-running-shadow {
+  animation: running-shadow 0.42s infinite cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+.animate-running-shadow-leader {
+  animation: running-shadow 0.38s infinite cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+.animate-speed-streak-1 {
+  animation: speed-streak 0.4s infinite ease-out;
+}
+
+.animate-speed-streak-2 {
+  animation: speed-streak 0.4s infinite ease-out 0.15s;
+}
+
+.animate-speed-streak-3 {
+  animation: speed-streak 0.4s infinite ease-out 0.28s;
+}
+
+/* High-contrast bold dashed track lines scrolling backwards at half-speed (0.7s) */
+.animate-track-road-scroll {
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.85) 0px,
+    rgba(255, 255, 255, 0.85) 24px,
+    transparent 24px,
+    transparent 44px
+  );
+  background-size: 88px 3.5px;
+  background-repeat: repeat-x;
+  background-position: 0 center;
+  animation: track-road-scroll 0.7s linear infinite;
+}
+
+/* Static road dashes when race is waiting or ended */
+.track-road-static {
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.35) 0px,
+    rgba(255, 255, 255, 0.35) 24px,
+    transparent 24px,
+    transparent 44px
+  );
+  background-size: 88px 3.5px;
+  background-repeat: repeat-x;
+  background-position: 0 center;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.5s ease-out forwards;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out forwards;
+}
+
+/* ==========================================================================
+   Continuous 60 FPS Layered Vector Rigged Animations
+   ========================================================================== */
+
+/* Scissor-kicking front leg (Near side) */
+@keyframes rig-front-near {
+  0%   { transform: rotate(-26deg); }
+  50%  { transform: rotate(32deg); }
+  100% { transform: rotate(-26deg); }
+}
+
+/* Scissor-kicking front leg (Far side / background) - 180deg out of phase */
+@keyframes rig-front-far {
+  0%   { transform: rotate(32deg); }
+  50%  { transform: rotate(-26deg); }
+  100% { transform: rotate(32deg); }
+}
+
+/* Launching hind leg (Near side) */
+@keyframes rig-hind-near {
+  0%   { transform: rotate(28deg); }
+  50%  { transform: rotate(-34deg); }
+  100% { transform: rotate(28deg); }
+}
+
+/* Launching hind leg (Far side / background) - 180deg out of phase */
+@keyframes rig-hind-far {
+  0%   { transform: rotate(-34deg); }
+  50%  { transform: rotate(28deg); }
+  100% { transform: rotate(-34deg); }
+}
+
+/* Bird / Falcon wing flapping */
+@keyframes rig-wing-near {
+  0%   { transform: rotate(-40deg) scaleY(1.05); }
+  50%  { transform: rotate(28deg) scaleY(0.88); }
+  100% { transform: rotate(-40deg) scaleY(1.05); }
+}
+
+@keyframes rig-wing-far {
+  0%   { transform: rotate(-44deg) scaleY(1.05); }
+  50%  { transform: rotate(24deg) scaleY(0.88); }
+  100% { transform: rotate(-44deg) scaleY(1.05); }
+}
+
+/* Ostrich long piston running legs */
+@keyframes rig-ostrich-leg-1 {
+  0%   { transform: rotate(-36deg); }
+  50%  { transform: rotate(38deg); }
+  100% { transform: rotate(-36deg); }
+}
+
+@keyframes rig-ostrich-leg-2 {
+  0%   { transform: rotate(38deg); }
+  50%  { transform: rotate(-36deg); }
+  100% { transform: rotate(38deg); }
+}
+
+/* Tail swishing with momentum */
+@keyframes rig-tail-swish {
+  0%   { transform: rotate(-14deg); }
+  50%  { transform: rotate(18deg); }
+  100% { transform: rotate(-14deg); }
+}
+
+/* Torso stride momentum */
+@keyframes rig-torso-stride {
+  0%   { transform: translateY(0px) rotate(-3deg); }
+  50%  { transform: translateY(-3px) rotate(-5deg); }
+  100% { transform: translateY(0px) rotate(-3deg); }
+}
+
+/* Head bobbing in focus */
+@keyframes rig-head-bob {
+  0%   { transform: translateY(0px); }
+  50%  { transform: translateY(-2px); }
+  100% { transform: translateY(0px); }
+}
+
+/* CSS classes applying 60fps continuous animations */
+.rig-animate-front-near {
+  animation: rig-front-near 0.32s infinite ease-in-out;
+}
+.rig-animate-front-far {
+  animation: rig-front-far 0.32s infinite ease-in-out;
+}
+.rig-animate-hind-near {
+  animation: rig-hind-near 0.32s infinite ease-in-out;
+}
+.rig-animate-hind-far {
+  animation: rig-hind-far 0.32s infinite ease-in-out;
+}
+.rig-animate-wing-near {
+  animation: rig-wing-near 0.24s infinite ease-in-out;
+}
+.rig-animate-wing-far {
+  animation: rig-wing-far 0.24s infinite ease-in-out;
+}
+.rig-animate-ostrich-1 {
+  animation: rig-ostrich-leg-1 0.28s infinite ease-in-out;
+}
+.rig-animate-ostrich-2 {
+  animation: rig-ostrich-leg-2 0.28s infinite ease-in-out;
+}
+.rig-animate-tail {
+  animation: rig-tail-swish 0.32s infinite ease-in-out;
+}
+.rig-animate-torso {
+  animation: rig-torso-stride 0.32s infinite ease-in-out;
+}
+.rig-animate-head {
+  animation: rig-head-bob 0.32s infinite ease-in-out;
+}
+
+/* Custom slick dark scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(245, 158, 11, 0.4);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(245, 158, 11, 0.8);
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background-color: #030712;
+  color: #F8FAFC;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
