@@ -93,7 +93,7 @@ export default function RaceTrack({
                 <div className="relative flex-1 h-full mx-2">
                   {/* Moving Animal Avatar with Name & Score */}
                   <div
-                    className="absolute top-1/2 -translate-y-1/2 flex items-center transition-all duration-500 ease-out z-20"
+                    className="absolute top-1/2 -translate-y-1/2 flex items-center transition-[left] duration-700 ease-out z-20 will-change-[left]"
                     style={{ left: `${progressPercent}%`, transform: 'translate(-50%, -50%)' }}
                   >
                     <div className="flex items-center gap-1.5 sm:gap-2">
@@ -104,7 +104,6 @@ export default function RaceTrack({
                           badgeLevel={racer.animal?.badgeLevel || 1}
                           isLeader={isLeader}
                           isRacing={raceState === 'racing'}
-                          className="transition-transform"
                         />
                         {isMe && (
                           <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-slate-900" />

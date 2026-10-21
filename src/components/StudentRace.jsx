@@ -20,7 +20,9 @@ import {
   playCountdownTick,
   playGoSound,
   toggleMute,
-  getMuted
+  getMuted,
+  updateTensionMusic,
+  stopTensionMusic
 } from '../assets/soundEffects';
 
 export default function StudentRace({
@@ -63,22 +65,28 @@ export default function StudentRace({
     }
   }, [countdownRemaining]);
 
-  // Synchronized Race Clock
+  // Synchronized Race Clock & Dynamic 30-Second Escalating Tension Music
   useEffect(() => {
     if (room.state !== 'racing' || !room.endTime) {
       setTimeLeft(0);
+      stopTensionMusic();
       return;
     }
 
     const interval = setInterval(() => {
       const remaining = Math.max(0, Math.floor((room.endTime - Date.now()) / 1000));
       setTimeLeft(remaining);
+      updateTensionMusic(remaining, true);
       if (remaining <= 0) {
         clearInterval(interval);
+        stopTensionMusic();
       }
     }, 250);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      stopTensionMusic();
+    };
   }, [room.state, room.endTime]);
 
   // Sync podium modal with room state
@@ -185,6 +193,22 @@ export default function StudentRace({
 
   return (
     <div className="min-h-screen w-full flex flex-col bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950 text-white select-none">
+      {/* Dynamic Final 30-Second Sprint Golden Pulsing Border & Banner */}
+      {room.state === 'racing' && timeLeft <= 30 && timeLeft > 0 && (
+        <div
+          className={`pointer-events-none fixed inset-0 z-40 transition-all duration-300 ${
+            timeLeft <= 10 ? 'golden-border-overlay-rapid' : 'golden-border-overlay-slow'
+          }`}
+        >
+          {/* Top Sprint Adrenaline Banner */}
+          <div className="absolute top-2.5 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-500 via-yellow-300 to-amber-500 text-slate-950 font-black text-xs sm:text-sm shadow-2xl shadow-amber-500/60 uppercase tracking-wider animate-bounce-subtle border-2 border-white/80">
+            <Flame className="w-4 h-4 fill-orange-600 text-orange-600 animate-pulse" />
+            <span>{timeLeft <= 10 ? `🔥 FINAL ${timeLeft}s ALL-OUT SPRINT! 🔥` : `⚡ FINAL ${timeLeft}s SPRINT! ⚡`}</span>
+            <Sparkles className="w-4 h-4 text-amber-950" />
+          </div>
+        </div>
+      )}
+
       {/* 10-Second Countdown Overlay */}
       {isCountdown && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/90 backdrop-blur-md animate-fade-in select-none">
@@ -339,22 +363,37 @@ export default function StudentRace({
           {/* Right: Race Information & Control Panel (beside the board) */}
           <div className="lg:col-span-4 flex flex-col gap-3.5 w-full max-w-md mx-auto">
             {/* Digital Timer Card */}
-            <div className={`p-4 rounded-2xl border transition-all duration-300 ${
+            <div className={`p-4 rounded-2xl border transition-all duration-300 relative overflow-hidden ${
               timeLeft <= 30 && room.state === 'racing'
-                ? 'bg-rose-950/40 border-rose-500/60 ring-2 ring-rose-500/30'
+                ? timeLeft <= 10
+                  ? 'bg-amber-950/70 border-amber-400 ring-4 ring-amber-400/50 shadow-2xl shadow-amber-500/40 animate-pulse'
+                  : 'bg-amber-950/40 border-amber-500/70 ring-2 ring-amber-500/30 shadow-lg shadow-amber-500/20'
                 : 'bg-slate-900/90 border-slate-700/60'
             }`}>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs uppercase tracking-wider font-bold text-slate-400 flex items-center gap-1.5">
-                  <Timer className={`w-3.5 h-3.5 ${timeLeft <= 30 && room.state === 'racing' ? 'text-rose-400 animate-spin' : 'text-amber-400'}`} />
+                  <Timer className={`w-3.5 h-3.5 ${
+                    timeLeft <= 30 && room.state === 'racing' ? 'text-amber-400 animate-spin' : 'text-amber-400'
+                  }`} />
                   Race Clock
                 </span>
                 <span className="text-[11px] font-bold text-slate-400">
-                  {room.state === 'racing' ? 'Live Racing' : room.state === 'ended' ? 'Time Expired' : 'Ready'}
+                  {room.state === 'racing' ? (
+                    timeLeft <= 30 ? (
+                      <span className="text-amber-400 font-black animate-pulse flex items-center gap-1">
+                        <Flame className="w-3 h-3 text-orange-400 fill-orange-400" />
+                        Final Sprint!
+                      </span>
+                    ) : 'Live Racing'
+                  ) : room.state === 'ended' ? 'Time Expired' : 'Ready'}
                 </span>
               </div>
               <div className={`text-4xl sm:text-5xl font-black font-mono tracking-tight ${
-                timeLeft <= 30 && room.state === 'racing' ? 'text-rose-400 animate-pulse' : 'text-amber-400'
+                timeLeft <= 30 && room.state === 'racing'
+                  ? timeLeft <= 10
+                    ? 'text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-orange-400 drop-shadow-[0_0_20px_rgba(245,158,11,0.9)] animate-pulse'
+                    : 'text-amber-300 drop-shadow-[0_0_15px_rgba(245,158,11,0.6)]'
+                  : 'text-amber-400'
               }`}>
                 {formatTime(timeLeft)}
               </div>

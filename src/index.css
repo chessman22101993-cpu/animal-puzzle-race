@@ -9,79 +9,53 @@
   50% { transform: translateY(-4px); }
 }
 
-/* Natural forward-driving sprint: surges forward in direction of travel, leans into speed (Rightward facing) */
+/* Ultra-Smooth Aerodynamic Bounding Gallop (Continuous sinusoidal wave at 60/120fps) */
 @keyframes animal-sprint {
   0% {
-    transform: translate(0px, 0px) rotate(3deg) scale(1.01, 0.99);
+    transform: translate3d(0px, 0px, 0) rotate(1deg) scale(1.02, 0.98);
   }
-  35% {
-    transform: translate(5px, -1.5px) rotate(5.5deg) scale(1.04, 0.96);
+  25% {
+    transform: translate3d(3px, -3px, 0) rotate(2.5deg) scale(1.03, 0.97);
   }
-  70% {
-    transform: translate(2.5px, -0.8px) rotate(4deg) scale(1.02, 0.98);
+  50% {
+    transform: translate3d(5.5px, -4.5px, 0) rotate(1.8deg) scale(1.01, 0.99);
+  }
+  75% {
+    transform: translate3d(2.5px, -1.5px, 0) rotate(0.5deg) scale(0.98, 1.02);
   }
   100% {
-    transform: translate(0px, 0px) rotate(3deg) scale(1.01, 0.99);
+    transform: translate3d(0px, 0px, 0) rotate(1deg) scale(1.02, 0.98);
   }
 }
 
-/* Leader sprint: stronger forward surge and aggressive sprint lean */
+/* Leader sprint: slightly more forward surge and aerodynamic power */
 @keyframes animal-sprint-leader {
   0% {
-    transform: translate(0px, 0px) rotate(4deg) scale(1.02, 0.98);
+    transform: translate3d(0px, 0px, 0) rotate(1.5deg) scale(1.03, 0.97);
   }
-  35% {
-    transform: translate(7px, -2.5px) rotate(7.5deg) scale(1.06, 0.94);
+  25% {
+    transform: translate3d(4.5px, -4.5px, 0) rotate(3.5deg) scale(1.05, 0.95);
   }
-  70% {
-    transform: translate(3.5px, -1.2px) rotate(5.5deg) scale(1.03, 0.97);
+  50% {
+    transform: translate3d(8px, -6px, 0) rotate(2.2deg) scale(1.02, 0.98);
+  }
+  75% {
+    transform: translate3d(3.5px, -2px, 0) rotate(0.8deg) scale(0.97, 1.03);
   }
   100% {
-    transform: translate(0px, 0px) rotate(4deg) scale(1.02, 0.98);
+    transform: translate3d(0px, 0px, 0) rotate(1.5deg) scale(1.03, 0.97);
   }
 }
 
-/* Forward sprinting stride: horizontal surge + aerodynamic forward lean (no excessive up-down bouncing) */
-@keyframes animal-gallop {
-  0% {
-    transform: translate(0px, 0px) scale(1.03, 0.96) rotate(3deg);
-  }
-  30% {
-    transform: translate(4px, -2px) scale(0.98, 1.02) rotate(5deg);
-  }
-  65% {
-    transform: translate(2px, -1px) scale(1.01, 0.99) rotate(4deg);
-  }
-  100% {
-    transform: translate(0px, 0px) scale(1.03, 0.96) rotate(3deg);
-  }
-}
-
-/* Leader sprint: stronger forward surge and aggressive sprint lean */
-@keyframes animal-gallop-leader {
-  0% {
-    transform: translate(0px, 0px) scale(1.04, 0.95) rotate(4deg);
-  }
-  30% {
-    transform: translate(6px, -3px) scale(0.97, 1.03) rotate(7deg);
-  }
-  65% {
-    transform: translate(3px, -1.5px) scale(1.01, 0.99) rotate(5deg);
-  }
-  100% {
-    transform: translate(0px, 0px) scale(1.04, 0.95) rotate(4deg);
-  }
-}
-
-/* Ground shadow: subtle breathing sync under feet */
+/* Ground shadow: 100% synchronized in exact phase, duration, and cadence */
 @keyframes running-shadow {
   0%, 100% {
-    transform: translateX(-50%) scale(1.08, 1.0);
-    opacity: 0.6;
+    transform: translateX(-50%) scale(1.06, 1.0);
+    opacity: 0.55;
   }
-  30% {
-    transform: translateX(-40%) scale(0.9, 0.85);
-    opacity: 0.35;
+  50% {
+    transform: translateX(-43%) scale(0.82, 0.72);
+    opacity: 0.22;
   }
 }
 
@@ -89,16 +63,56 @@
 @keyframes speed-streak {
   0% {
     opacity: 0;
-    transform: translateX(0) scaleX(0.3);
+    transform: translate3d(0, 0, 0) scaleX(0.3);
   }
   40% {
     opacity: 0.85;
-    transform: translateX(-12px) scaleX(1.1);
+    transform: translate3d(-12px, 0, 0) scaleX(1.1);
   }
   100% {
     opacity: 0;
-    transform: translateX(-24px) scaleX(1.5);
+    transform: translate3d(-24px, 0, 0) scaleX(1.5);
   }
+}
+
+/* Golden Border & Screen Pulse for Final 30s Countdown */
+@keyframes golden-pulse-slow {
+  0%, 100% {
+    box-shadow: inset 0 0 35px rgba(245, 158, 11, 0.4),
+                inset 0 0 85px rgba(234, 179, 8, 0.2);
+    border-color: rgba(245, 158, 11, 0.5);
+  }
+  50% {
+    box-shadow: inset 0 0 65px rgba(245, 158, 11, 0.75),
+                inset 0 0 160px rgba(234, 179, 8, 0.4),
+                0 0 30px rgba(245, 158, 11, 0.35);
+    border-color: rgba(251, 191, 36, 0.85);
+  }
+}
+
+@keyframes golden-pulse-rapid {
+  0%, 100% {
+    box-shadow: inset 0 0 50px rgba(245, 158, 11, 0.6),
+                inset 0 0 110px rgba(239, 68, 68, 0.3);
+    border-color: rgba(245, 158, 11, 0.75);
+  }
+  50% {
+    box-shadow: inset 0 0 100px rgba(245, 158, 11, 0.95),
+                inset 0 0 220px rgba(234, 179, 8, 0.6),
+                inset 0 0 35px rgba(255, 255, 255, 0.6),
+                0 0 45px rgba(245, 158, 11, 0.5);
+    border-color: rgba(255, 255, 255, 0.95);
+  }
+}
+
+.golden-border-overlay-slow {
+  border: 4px solid rgba(245, 158, 11, 0.6);
+  animation: golden-pulse-slow 1.1s infinite ease-in-out;
+}
+
+.golden-border-overlay-rapid {
+  border: 5px solid rgba(251, 191, 36, 0.9);
+  animation: golden-pulse-rapid 0.55s infinite ease-in-out;
 }
 
 /* Bold white dashed track lines streaming backwards at relaxed, realistic half-speed */
@@ -130,43 +144,49 @@
 }
 
 .animate-animal-sprint {
-  animation: animal-sprint 0.36s infinite cubic-bezier(0.35, 0.1, 0.25, 1);
+  animation: animal-sprint 0.62s infinite ease-in-out;
   transform-origin: bottom center;
+  will-change: transform;
 }
 
 .animate-animal-sprint-leader {
-  animation: animal-sprint-leader 0.32s infinite cubic-bezier(0.35, 0.1, 0.25, 1);
+  animation: animal-sprint-leader 0.54s infinite ease-in-out;
   transform-origin: bottom center;
+  will-change: transform;
 }
 
 .animate-animal-gallop {
-  animation: animal-gallop 0.42s infinite cubic-bezier(0.4, 0, 0.6, 1);
+  animation: animal-sprint 0.62s infinite ease-in-out;
   transform-origin: bottom center;
+  will-change: transform;
 }
 
 .animate-animal-gallop-leader {
-  animation: animal-gallop-leader 0.38s infinite cubic-bezier(0.4, 0, 0.6, 1);
+  animation: animal-sprint-leader 0.54s infinite ease-in-out;
   transform-origin: bottom center;
+  will-change: transform;
 }
 
 .animate-running-shadow {
-  animation: running-shadow 0.42s infinite cubic-bezier(0.4, 0, 0.6, 1);
+  animation: running-shadow 0.62s infinite ease-in-out;
+  will-change: transform, opacity;
 }
 
 .animate-running-shadow-leader {
-  animation: running-shadow 0.38s infinite cubic-bezier(0.4, 0, 0.6, 1);
+  animation: running-shadow 0.54s infinite ease-in-out;
+  will-change: transform, opacity;
 }
 
 .animate-speed-streak-1 {
-  animation: speed-streak 0.4s infinite ease-out;
+  animation: speed-streak 0.62s infinite ease-out;
 }
 
 .animate-speed-streak-2 {
-  animation: speed-streak 0.4s infinite ease-out 0.15s;
+  animation: speed-streak 0.62s infinite ease-out 0.2s;
 }
 
 .animate-speed-streak-3 {
-  animation: speed-streak 0.4s infinite ease-out 0.28s;
+  animation: speed-streak 0.62s infinite ease-out 0.38s;
 }
 
 /* High-contrast bold dashed track lines scrolling backwards at half-speed (0.7s) */
