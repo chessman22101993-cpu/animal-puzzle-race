@@ -220,7 +220,7 @@ export default function StudentRace({
               {displayCount}
             </div>
             <p className="text-slate-200 font-bold text-base mt-2">
-              Get ready with your {animalDetail.name || 'animal'}! 🏁
+              Get ready with Team {animalDetail.name || 'Champion'}! 🏁
             </p>
           </div>
         </div>
@@ -296,7 +296,7 @@ export default function StudentRace({
                   className="mb-3 ring-4 ring-amber-400/50 shadow-xl"
                 />
                 <h3 className="text-xl sm:text-2xl font-black text-amber-400 mb-1">
-                  You are the {animalDetail.name}!
+                  Your Racing Mascot: {animalDetail.name}!
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-300 max-w-sm mb-4">
                   Round {room.roundNumber || 1} Complete! Your score: <strong className="text-amber-400 font-mono font-black">{currentRacer?.score || 0} solves</strong>
@@ -348,7 +348,7 @@ export default function StudentRace({
                   className="mb-4"
                 />
                 <h3 className="text-xl sm:text-2xl font-black text-amber-400 mb-1">
-                  You are the {animalDetail.name}!
+                  Your Racing Mascot: {animalDetail.name}!
                 </h3>
                 <p className="text-sm text-slate-300 max-w-sm mb-4">
                   {animalDetail.tagline}

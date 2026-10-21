@@ -319,10 +319,10 @@ export default function App() {
 
         {/* Title */}
         <h1 className="text-4xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-500 tracking-tight text-center mb-3">
-          Animal Puzzle Race
+          Who is the Champion?
         </h1>
         <p className="text-sm sm:text-lg text-slate-300 max-w-xl text-center mb-8">
-          A real-time multiplayer chess tactic race. Solve puzzles to advance your animal racer across the track!
+          A real-time multiplayer chess tactics sprint. Solve puzzles to advance your racing mascot across the track!
         </p>
 
         {/* Error Notification */}
@@ -368,7 +368,7 @@ export default function App() {
                 Student Racer
               </h2>
               <p className="text-xs sm:text-sm text-slate-400 mb-6">
-                Enter a room code or open your coach's link. No account required! Choose a name or get a random animal guest name.
+                Enter a room code or open your coach's link. No account required! Choose your name and get your team mascot.
               </p>
             </div>
 
@@ -385,7 +385,7 @@ export default function App() {
         {/* 10 Animal Racers Carousel Showcase */}
         <div className="w-full max-w-3xl bg-slate-900/60 rounded-3xl border border-slate-800/80 p-4 sm:p-6 text-center">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 block">
-            Meet the 10 Racing Animals
+            The 10 Racing Mascots
           </span>
           <div className="grid grid-cols-5 sm:grid-cols-10 gap-3 justify-center">
             {ANIMALS.map(a => (

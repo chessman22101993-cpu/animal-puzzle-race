@@ -27,10 +27,10 @@ export default function JoinRoom({
             Live Chess Puzzle Race
           </div>
           <h1 className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-500 tracking-tight">
-            Animal Puzzle Race
+            Who is the Champion?
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Solve tactical puzzles fast to propel your animal to victory!
+            Solve tactical puzzles fast to propel your team mascot to victory!
           </p>
         </div>
 
@@ -38,7 +38,7 @@ export default function JoinRoom({
         <div className="mb-6 p-3 rounded-2xl bg-slate-950/60 border border-slate-800">
           <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 text-center mb-2.5 flex items-center justify-center gap-1.5">
             <Sparkles className="w-3 h-3 text-amber-400" />
-            10 Unique Animal Racers
+            10 Racing Mascots
           </div>
           <div className="flex items-center justify-between gap-1 overflow-x-auto py-1 custom-scrollbar">
             {ANIMALS.map((a) => (
