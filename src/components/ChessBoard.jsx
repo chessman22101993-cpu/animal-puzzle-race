@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Chess } from 'chess.js';
 import { playMoveSound, playCaptureSound } from '../assets/soundEffects';
+import { RotateCcw } from 'lucide-react';
 
 const PIECE_IMAGES = {
   wp: '/pieces/wp.svg',
@@ -17,6 +18,19 @@ const PIECE_IMAGES = {
   bk: '/pieces/bk.svg'
 };
 
+const DEFAULT_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+
+function safeInitChess(fenString) {
+  if (fenString && typeof fenString === 'string' && fenString.trim().split(/\s+/).length >= 4) {
+    try {
+      return new Chess(fenString.trim());
+    } catch (e) {
+      console.warn('Failed to parse FEN in safeInitChess:', fenString, e);
+    }
+  }
+  return new Chess(DEFAULT_FEN);
+}
+
 export default function ChessBoard({
   fen,
   playerColor = 'w',
@@ -25,23 +39,33 @@ export default function ChessBoard({
   disabled = false,
   feedbackState = null // 'correct' | 'wrong' | null
 }) {
-  const [chess, setChess] = useState(() => new Chess(fen));
+  const [chess, setChess] = useState(() => safeInitChess(fen));
   const [selectedSquare, setSelectedSquare] = useState(null);
   const [legalMoves, setLegalMoves] = useState([]);
   const [highlightSquares, setHighlightSquares] = useState([]);
-  
-  // Track the authoritative pre-move position so we can instantly revert on wrong answer
-  const baseFenRef = useRef(fen);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Detect touch capability (tablets/phones)
+  const isTouchDevice = typeof window !== 'undefined' &&
+    ('ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0));
+
+  // Pointer drag tracking for tablets and touch screens
+  const pointerStartRef = useRef(null);
+
+  // Track the authoritative pre-move position so we can instantly revert on wrong answer or timeout
+  const baseFenRef = useRef(fen || DEFAULT_FEN);
   const baseHighlightRef = useRef([]);
 
   // Sync internal chess instance when authoritative FEN updates
   useEffect(() => {
+    if (!fen) return;
     try {
-      const c = new Chess(fen);
+      const c = safeInitChess(fen);
       setChess(c);
       baseFenRef.current = fen;
       setSelectedSquare(null);
       setLegalMoves([]);
+      setIsSubmitting(false);
     } catch (e) {
       console.error('Failed to load FEN:', fen, e);
     }
@@ -64,25 +88,63 @@ export default function ChessBoard({
   useEffect(() => {
     if (feedbackState === 'wrong') {
       try {
-        const revertedChess = new Chess(baseFenRef.current);
+        const revertedChess = safeInitChess(baseFenRef.current);
         setChess(revertedChess);
         setHighlightSquares(baseHighlightRef.current);
         setSelectedSquare(null);
         setLegalMoves([]);
+        setIsSubmitting(false);
       } catch (e) {
         console.error('Failed to revert chess position:', e);
       }
+    } else if (feedbackState === 'correct') {
+      setIsSubmitting(false);
     }
   }, [feedbackState]);
+
+  // Tablet Watchdog: If a move was submitted but no server response after 3.5s, auto-revert
+  useEffect(() => {
+    if (isSubmitting) {
+      const timer = setTimeout(() => {
+        try {
+          console.warn('Watchdog: No response received for move, auto-reverting board');
+          const revertedChess = safeInitChess(baseFenRef.current);
+          setChess(revertedChess);
+          setHighlightSquares(baseHighlightRef.current);
+          setSelectedSquare(null);
+          setLegalMoves([]);
+          setIsSubmitting(false);
+        } catch (e) {}
+      }, 3500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isSubmitting]);
 
   const isFlipped = playerColor === 'b';
   const files = isFlipped ? ['h', 'g', 'f', 'e', 'd', 'c', 'b', 'a'] : ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
   const ranks = isFlipped ? ['1', '2', '3', '4', '5', '6', '7', '8'] : ['8', '7', '6', '5', '4', '3', '2', '1'];
 
-  function handleSquareClick(square) {
-    if (disabled || feedbackState === 'wrong') return;
+  function selectPiece(square) {
+    setSelectedSquare(square);
+    try {
+      const moves = chess.moves({ square, verbose: true });
+      setLegalMoves(moves || []);
+    } catch (e) {
+      setLegalMoves([]);
+    }
+  }
 
-    const piece = chess.get(square);
+  function handleSquareClick(square) {
+    if (disabled || isSubmitting || feedbackState === 'wrong') return;
+
+    let piece = null;
+    try {
+      piece = chess.get(square);
+    } catch (e) {
+      return;
+    }
+
     const isPlayerTurn = chess.turn() === playerColor;
 
     // If a piece was already selected
@@ -119,13 +181,9 @@ export default function ChessBoard({
     }
   }
 
-  function selectPiece(square) {
-    setSelectedSquare(square);
-    const moves = chess.moves({ square, verbose: true });
-    setLegalMoves(moves);
-  }
-
   function attemptMove(from, to) {
+    if (disabled || isSubmitting) return;
+
     // Check for pawn promotion (auto-promote to Queen for speed racing)
     const piece = chess.get(from);
     let promotion = undefined;
@@ -139,7 +197,7 @@ export default function ChessBoard({
 
     try {
       const isCapture = !!chess.get(to);
-      const testChess = new Chess(chess.fen());
+      const testChess = safeInitChess(chess.fen());
       const moveResult = testChess.move({ from, to, promotion });
 
       if (moveResult) {
@@ -155,6 +213,7 @@ export default function ChessBoard({
         setHighlightSquares([from, to]);
         setSelectedSquare(null);
         setLegalMoves([]);
+        setIsSubmitting(true);
 
         // Send to server
         if (onMoveSubmit) {
@@ -164,12 +223,47 @@ export default function ChessBoard({
     } catch (err) {
       setSelectedSquare(null);
       setLegalMoves([]);
+      setIsSubmitting(false);
     }
   }
 
-  // Drag and Drop handlers
+  // Pointer Events support for touch screens / tablets (smooth drag & drop without native HTML5 quirks)
+  function handlePointerDown(e, square) {
+    if (disabled || isSubmitting || feedbackState === 'wrong') return;
+
+    const piece = chess.get(square);
+    if (piece && piece.color === playerColor && chess.turn() === playerColor) {
+      pointerStartRef.current = { square, startX: e.clientX, startY: e.clientY };
+      selectPiece(square);
+    }
+  }
+
+  function handlePointerUp(e, square) {
+    if (!pointerStartRef.current) return;
+    const { square: fromSquare, startX, startY } = pointerStartRef.current;
+    pointerStartRef.current = null;
+
+    // Check distance dragged
+    const dist = Math.hypot(e.clientX - startX, e.clientY - startY);
+    if (dist > 15) {
+      // Find element under pointer
+      const targetEl = document.elementFromPoint(e.clientX, e.clientY);
+      const targetSquareDiv = targetEl ? targetEl.closest('[data-square]') : null;
+      const targetSquare = targetSquareDiv ? targetSquareDiv.getAttribute('data-square') : null;
+
+      if (targetSquare && targetSquare !== fromSquare) {
+        const isLegal = legalMoves.some(m => m.to === targetSquare);
+        if (isLegal) {
+          attemptMove(fromSquare, targetSquare);
+          return;
+        }
+      }
+    }
+  }
+
+  // Desktop HTML5 Drag and Drop handlers (only for desktop mouse users)
   function handleDragStart(e, square) {
-    if (disabled || feedbackState === 'wrong' || chess.turn() !== playerColor) {
+    if (isTouchDevice || disabled || isSubmitting || feedbackState === 'wrong' || chess.turn() !== playerColor) {
       e.preventDefault();
       return;
     }
@@ -180,21 +274,42 @@ export default function ChessBoard({
     }
 
     selectPiece(square);
-    e.dataTransfer.setData('text/plain', square);
-    e.dataTransfer.effectAllowed = 'move';
+    if (e.dataTransfer) {
+      e.dataTransfer.setData('text/plain', square);
+      e.dataTransfer.effectAllowed = 'move';
+    }
   }
 
   function handleDragOver(e) {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+    if (!isTouchDevice) {
+      e.preventDefault();
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = 'move';
+      }
+    }
   }
 
   function handleDrop(e, targetSquare) {
+    if (isTouchDevice) return;
     e.preventDefault();
-    const sourceSquare = e.dataTransfer.getData('text/plain');
-    if (sourceSquare && sourceSquare !== targetSquare) {
-      attemptMove(sourceSquare, targetSquare);
+    if (e.dataTransfer) {
+      const sourceSquare = e.dataTransfer.getData('text/plain');
+      if (sourceSquare && sourceSquare !== targetSquare) {
+        attemptMove(sourceSquare, targetSquare);
+      }
     }
+  }
+
+  // Manual board unstick / reset handler
+  function handleForceReset() {
+    try {
+      const revertedChess = safeInitChess(baseFenRef.current);
+      setChess(revertedChess);
+      setHighlightSquares(baseHighlightRef.current);
+      setSelectedSquare(null);
+      setLegalMoves([]);
+      setIsSubmitting(false);
+    } catch (e) {}
   }
 
   // Feedback container border animation
@@ -206,31 +321,34 @@ export default function ChessBoard({
   }
 
   return (
-    <div className="flex flex-col items-center w-full max-w-[600px] select-none mx-auto">
-      {/* Exact Lichess Board Container */}
+    <div className="flex flex-col items-center w-full max-w-[600px] select-none mx-auto relative">
+      {/* Board Container */}
       <div
-        className={`relative w-full aspect-square rounded-lg overflow-hidden shadow-2xl transition-all duration-150 ${feedbackClass}`}
+        className={`relative w-full aspect-square rounded-2xl overflow-hidden shadow-2xl transition-all duration-150 touch-manipulation ${feedbackClass}`}
         style={{
-          boxShadow: '0 15px 35px -5px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,0,0,0.3)'
+          boxShadow: '0 15px 35px -5px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,0,0,0.3)',
+          WebkitTouchCallout: 'none',
+          WebkitUserSelect: 'none',
+          userSelect: 'none'
         }}
       >
-        <div className="grid grid-rows-8 w-full h-full">
+        <div className="grid grid-rows-8 w-full h-full select-none">
           {ranks.map((rank, rankIdx) => (
-            <div key={rank} className="grid grid-cols-8 w-full h-full">
+            <div key={rank} className="grid grid-cols-8 w-full h-full select-none">
               {files.map((file, fileIdx) => {
                 const square = `${file}${rank}`;
                 const isLight = (rankIdx + fileIdx) % 2 === 0;
-                const piece = chess.get(square);
+                let piece = null;
+                try {
+                  piece = chess.get(square);
+                } catch (e) {}
+
                 const isSelected = selectedSquare === square;
                 const isHighlighted = highlightSquares.includes(square);
                 const legalMove = legalMoves.find(m => m.to === square);
                 const isCapture = legalMove && !!piece;
 
-                // Exact Lichess Blue/Slate Board Palette:
-                // Light squares: #dee3e6
-                // Dark squares: #8ca2ad
-                // Move Highlight Light: #cdd26a
-                // Move Highlight Dark: #aaa23a
+                // Authentic Lichess Palette
                 let bgColor = isLight ? '#dee3e6' : '#8ca2ad';
                 if (isHighlighted) {
                   bgColor = isLight ? '#cdd26a' : '#aaa23a';
@@ -242,11 +360,18 @@ export default function ChessBoard({
                 return (
                   <div
                     key={square}
+                    data-square={square}
                     onClick={() => handleSquareClick(square)}
+                    onPointerDown={(e) => handlePointerDown(e, square)}
+                    onPointerUp={(e) => handlePointerUp(e, square)}
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, square)}
-                    className="relative flex items-center justify-center cursor-pointer transition-colors duration-75"
-                    style={{ backgroundColor: bgColor }}
+                    className="relative flex items-center justify-center cursor-pointer transition-colors duration-75 select-none touch-manipulation"
+                    style={{
+                      backgroundColor: bgColor,
+                      WebkitTouchCallout: 'none',
+                      WebkitUserSelect: 'none'
+                    }}
                   >
                     {/* Rank Coordinate (Top Right of square on rank column) */}
                     {fileIdx === 7 && (
@@ -268,26 +393,32 @@ export default function ChessBoard({
                       </span>
                     )}
 
-                    {/* Lichess Style Legal Move Indicator */}
+                    {/* Legal Move Indicator (Tap Target Dot or Capture Ring) */}
                     {legalMove && !isCapture && (
-                      <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-slate-900/20 pointer-events-none" />
+                      <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-slate-900/35 pointer-events-none shadow-sm animate-fade-in" />
                     )}
                     {legalMove && isCapture && (
-                      <div className="absolute inset-1 rounded-full border-4 border-slate-900/25 pointer-events-none" />
+                      <div className="absolute inset-1 rounded-full border-4 border-slate-900/35 pointer-events-none animate-fade-in" />
                     )}
 
-                    {/* Authentic Lichess cburnett Piece SVG */}
+                    {/* Chess Piece SVG */}
                     {piece && (
                       <img
                         src={PIECE_IMAGES[`${piece.color}${piece.type}`]}
                         alt={`${piece.color} ${piece.type}`}
-                        draggable={!disabled && feedbackState !== 'wrong' && chess.turn() === playerColor && piece.color === playerColor}
+                        draggable={!isTouchDevice && !disabled && !isSubmitting && feedbackState !== 'wrong' && chess.turn() === playerColor && piece.color === playerColor}
                         onDragStart={(e) => handleDragStart(e, square)}
-                        className={`w-[88%] h-[88%] object-contain select-none pointer-events-auto transition-transform ${
-                          disabled || feedbackState === 'wrong'
+                        className={`w-[88%] h-[88%] object-contain select-none transition-transform ${
+                          isTouchDevice ? 'pointer-events-none' : 'pointer-events-auto'
+                        } ${
+                          disabled || isSubmitting || feedbackState === 'wrong'
                             ? 'cursor-not-allowed opacity-95'
                             : 'cursor-grab active:cursor-grabbing hover:scale-105 active:scale-95'
                         }`}
+                        style={{
+                          WebkitTouchCallout: 'none',
+                          WebkitUserSelect: 'none'
+                        }}
                       />
                     )}
                   </div>
@@ -296,6 +427,22 @@ export default function ChessBoard({
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Quick Tablet Sync/Unstick button */}
+      <div className="w-full flex items-center justify-between mt-2 px-1 text-[11px] text-slate-400">
+        <span className="flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+          {isTouchDevice ? 'Tap piece then target square to move' : 'Click or drag pieces to move'}
+        </span>
+        <button
+          onClick={handleForceReset}
+          className="flex items-center gap-1 text-slate-400 hover:text-amber-400 transition-colors p-1"
+          title="Click to reset piece positions if board ever feels stuck"
+        >
+          <RotateCcw className="w-3 h-3" />
+          <span>Reset Board</span>
+        </button>
       </div>
     </div>
   );

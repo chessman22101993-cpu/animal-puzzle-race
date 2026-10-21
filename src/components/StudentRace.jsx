@@ -12,7 +12,9 @@ import {
   VolumeX,
   Target,
   Sparkles,
-  HelpCircle
+  HelpCircle,
+  LogOut,
+  RefreshCw
 } from 'lucide-react';
 import {
   playCorrectSound,
@@ -25,6 +27,39 @@ import {
   stopTensionMusic
 } from '../assets/soundEffects';
 
+class BoardErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('Board rendering caught in error boundary:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="w-full max-w-[600px] aspect-square rounded-2xl bg-slate-900/90 border border-amber-500/40 flex flex-col items-center justify-center p-8 text-center shadow-xl">
+          <p className="text-amber-400 font-bold mb-3 text-base">Display refreshed for new puzzle</p>
+          <button
+            onClick={() => {
+              this.setState({ hasError: false });
+              if (this.props.onReset) this.props.onReset();
+            }}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-lg transition-all"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Reload Board
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function StudentRace({
   socket,
   room,
@@ -33,10 +68,11 @@ export default function StudentRace({
   standings = [],
   countdownRemaining = null,
   onSkipPuzzle,
-  onToggleReady
+  onToggleReady,
+  onLeaveRoom
 }) {
   const [activePuzzle, setActivePuzzle] = useState(currentPuzzle);
-  const [boardFen, setBoardFen] = useState(currentPuzzle?.fen || '8/8/8/8/8/8/8/8');
+  const [boardFen, setBoardFen] = useState(currentPuzzle?.fen || null);
   const [playerColor, setPlayerColor] = useState(currentPuzzle?.playerColor || 'w');
   const [lastMoveUci, setLastMoveUci] = useState(currentPuzzle?.setupMove || null);
   const [feedbackState, setFeedbackState] = useState(null); // 'correct' | 'wrong' | null
@@ -45,16 +81,37 @@ export default function StudentRace({
   const [comboStreak, setComboStreak] = useState(student?.streak || 0);
   const [showPodium, setShowPodium] = useState(room.state === 'ended');
 
-  // Sync active puzzle when prop updates
+  // Sync active puzzle when prop updates from parent
   useEffect(() => {
-    if (currentPuzzle) {
+    if (currentPuzzle && currentPuzzle.fen) {
       setActivePuzzle(currentPuzzle);
       setBoardFen(currentPuzzle.fen);
-      setPlayerColor(currentPuzzle.playerColor);
+      setPlayerColor(currentPuzzle.playerColor || 'w');
       setLastMoveUci(currentPuzzle.setupMove || null);
       setFeedbackState(null);
     }
   }, [currentPuzzle]);
+
+  // Request puzzle if racing and puzzle is missing
+  useEffect(() => {
+    if (room.state === 'racing' && (!activePuzzle || !boardFen) && socket && student) {
+      socket.emit('student_request_puzzle', {
+        roomId: room.id,
+        studentId: student.id
+      });
+
+      const timer = setTimeout(() => {
+        if (!activePuzzle || !boardFen) {
+          socket.emit('student_request_puzzle', {
+            roomId: room.id,
+            studentId: student.id
+          });
+        }
+      }, 700);
+
+      return () => clearTimeout(timer);
+    }
+  }, [room.state, activePuzzle, boardFen, socket, student, room.id]);
 
   // Synchronized countdown ticks sound
   useEffect(() => {
@@ -98,7 +155,7 @@ export default function StudentRace({
     }
   }, [room.state]);
 
-  // Listen to socket move results
+  // Listen to socket move results & puzzle stream
   useEffect(() => {
     if (!socket) return;
 
@@ -111,10 +168,10 @@ export default function StudentRace({
           setComboStreak(data.streak || 0);
 
           setTimeout(() => {
-            if (data.nextPuzzle) {
+            if (data.nextPuzzle && data.nextPuzzle.fen) {
               setActivePuzzle(data.nextPuzzle);
               setBoardFen(data.nextPuzzle.fen);
-              setPlayerColor(data.nextPuzzle.playerColor);
+              setPlayerColor(data.nextPuzzle.playerColor || 'w');
               setLastMoveUci(data.nextPuzzle.setupMove || null);
               setFeedbackState(null);
             }
@@ -142,9 +199,10 @@ export default function StudentRace({
     }
 
     function handleNewPuzzle(puzzle) {
+      if (!puzzle || !puzzle.fen) return;
       setActivePuzzle(puzzle);
       setBoardFen(puzzle.fen);
-      setPlayerColor(puzzle.playerColor);
+      setPlayerColor(puzzle.playerColor || 'w');
       setLastMoveUci(puzzle.setupMove || null);
       setFeedbackState(null);
     }
@@ -176,6 +234,15 @@ export default function StudentRace({
   function handleSoundToggle() {
     const muted = toggleMute();
     setIsMuted(muted);
+  }
+
+  function handleRequestFreshPuzzle() {
+    if (socket && room && student) {
+      socket.emit('student_request_puzzle', {
+        roomId: room.id,
+        studentId: student.id
+      });
+    }
   }
 
   function formatTime(seconds) {
@@ -245,12 +312,12 @@ export default function StudentRace({
               </span>
             </div>
             <span className="text-[11px] text-slate-400 font-mono">
-              Room: <strong className="text-slate-200">{room.id}</strong> • Round {room.roundNumber || 1}
+              Room: <strong className="text-slate-200">{room.id}</strong> • Round <strong className="text-amber-400 font-bold">{room.roundNumber || 1}</strong>
             </span>
           </div>
         </div>
 
-        {/* Action icons & Sound Toggle */}
+        {/* Action icons, Sound Toggle, and Leave Room */}
         <div className="flex items-center gap-2">
           {room.state === 'ended' && !showPodium && (
             <button
@@ -261,6 +328,7 @@ export default function StudentRace({
               View Podium
             </button>
           )}
+
           <button
             onClick={handleSoundToggle}
             className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
@@ -268,24 +336,56 @@ export default function StudentRace({
           >
             {isMuted ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
           </button>
+
+          {onLeaveRoom && (
+            <button
+              onClick={() => {
+                if (window.confirm('Do you want to leave this race room?')) {
+                  onLeaveRoom();
+                }
+              }}
+              className="p-2 rounded-xl bg-slate-800 hover:bg-rose-950/60 text-slate-400 hover:text-rose-400 transition-colors border border-slate-700"
+              title="Leave Room"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </header>
 
-      {/* Main Race Arena (Layout Inspired by Screenshot: Large Chessboard, Side Info, Bottom Track) */}
-      <main className="flex-1 flex flex-col p-2 sm:p-4 max-w-7xl mx-auto w-full gap-4">
+      {/* Main Race Arena (Large Chessboard, Side Info, Bottom Track with Smooth Scrolling) */}
+      <main className="flex-1 flex flex-col p-2 sm:p-4 max-w-7xl mx-auto w-full gap-5 pb-16">
         {/* Upper Stage: Large Chessboard + Side Race Panel */}
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 items-start sm:items-center">
           {/* Left/Center: Large Interactive Chessboard OR Lobby Screen */}
-          <div className="lg:col-span-8 flex flex-col items-center justify-center">
+          <div className="lg:col-span-8 flex flex-col items-center justify-center w-full">
             {room.state === 'racing' ? (
-              <ChessBoard
-                fen={boardFen}
-                playerColor={playerColor}
-                lastMoveUci={lastMoveUci}
-                onMoveSubmit={handleMoveSubmit}
-                disabled={room.state !== 'racing'}
-                feedbackState={feedbackState}
-              />
+              activePuzzle && boardFen ? (
+                <BoardErrorBoundary onReset={handleRequestFreshPuzzle}>
+                  <ChessBoard
+                    fen={boardFen}
+                    playerColor={playerColor}
+                    lastMoveUci={lastMoveUci}
+                    onMoveSubmit={handleMoveSubmit}
+                    disabled={room.state !== 'racing'}
+                    feedbackState={feedbackState}
+                  />
+                </BoardErrorBoundary>
+              ) : (
+                /* Sleek Loading State while starting puzzle loads - No black screen! */
+                <div className="w-full max-w-[600px] aspect-square rounded-3xl bg-slate-900/80 border border-amber-500/30 flex flex-col items-center justify-center p-8 text-center shadow-2xl animate-fade-in">
+                  <div className="w-16 h-16 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 text-3xl mb-4 animate-bounce">
+                    🏁
+                  </div>
+                  <h3 className="text-xl sm:text-2xl font-black text-amber-400 mb-2">
+                    Round {room.roundNumber || 1} is Live!
+                  </h3>
+                  <p className="text-sm text-slate-300 mb-6 max-w-sm">
+                    Synchronizing tactical puzzle board for {student?.name}...
+                  </p>
+                  <div className="w-8 h-8 border-4 border-amber-400 border-t-transparent rounded-full animate-spin" />
+                </div>
+              )
             ) : room.state === 'ended' ? (
               /* Post-Race Lobby Card */
               <div className="w-full max-w-[540px] aspect-square rounded-3xl bg-slate-900/70 border border-slate-800 flex flex-col items-center justify-center p-6 sm:p-8 text-center shadow-2xl">
@@ -474,8 +574,8 @@ export default function StudentRace({
           </div>
         </div>
 
-        {/* Bottom Section: Live Multi-Lane Race Track */}
-        <div className="w-full mt-auto">
+        {/* Bottom Section: Dedicated Multi-Lane Race Track Area with Scrolling */}
+        <div className="w-full mt-2">
           <RaceTrack
             standings={standings}
             currentStudentId={student?.id}

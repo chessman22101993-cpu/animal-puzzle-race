@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { AnimalAvatar, ANIMALS } from '../assets/animals';
-import { Sparkles, Trophy, ArrowRight, ShieldCheck, Gamepad2 } from 'lucide-react';
+import { Sparkles, Trophy, ArrowRight, ShieldCheck, Gamepad2, ArrowLeft } from 'lucide-react';
 
 export default function JoinRoom({
   defaultRoomId = '',
   onJoin,
+  onBack,
   isLoading = false,
   error = null
 }) {
@@ -19,7 +20,17 @@ export default function JoinRoom({
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950 text-white">
-      <div className="w-full max-w-md bg-slate-900/80 backdrop-blur-xl border border-amber-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl">
+      <div className="w-full max-w-md bg-slate-900/80 backdrop-blur-xl border border-amber-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl relative">
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="absolute top-6 left-6 p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors border border-slate-700"
+            title="Back to Home"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+        )}
+
         {/* App Logo & Header */}
         <div className="text-center mb-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400 text-xs font-bold uppercase tracking-wider mb-3">

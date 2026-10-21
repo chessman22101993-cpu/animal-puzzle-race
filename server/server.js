@@ -101,6 +101,7 @@ io.on('connection', (socket) => {
     const cleanRoomId = room.id;
 
     socket.join(`room_${cleanRoomId}`);
+    socket.join(`student_${student.id}`);
     socketMeta.set(socket.id, {
       roomId: cleanRoomId,
       role: 'student',
@@ -163,10 +164,12 @@ io.on('connection', (socket) => {
 
         // Send each student their starting puzzle
         for (const [studentId, state] of Object.entries(currentRoom.studentPuzzleStates)) {
+          const payload = puzzleManager.getPublicPuzzlePayload(state);
           const socketId = studentSockets.get(studentId);
           if (socketId) {
-            io.to(socketId).emit('new_puzzle', puzzleManager.getPublicPuzzlePayload(state));
+            io.to(socketId).emit('new_puzzle', payload);
           }
+          io.to(`student_${studentId}`).emit('new_puzzle', payload);
         }
       },
       (finalStandings) => {
@@ -269,10 +272,12 @@ io.on('connection', (socket) => {
         });
 
         for (const [studentId, state] of Object.entries(currentRoom.studentPuzzleStates)) {
+          const payload = puzzleManager.getPublicPuzzlePayload(state);
           const socketId = studentSockets.get(studentId);
           if (socketId) {
-            io.to(socketId).emit('new_puzzle', puzzleManager.getPublicPuzzlePayload(state));
+            io.to(socketId).emit('new_puzzle', payload);
           }
+          io.to(`student_${studentId}`).emit('new_puzzle', payload);
         }
       },
       (finalStandings) => {
@@ -287,6 +292,11 @@ io.on('connection', (socket) => {
       state: 'countdown',
       countdownRemaining: 10,
       roundNumber: room.roundNumber
+    });
+
+    // Reset scores & broadcast clean standings for next round
+    io.to(`room_${room.id}`).emit('standings_updated', {
+      standings: roomManager.calculateStandings(room)
     });
   });
 
@@ -355,6 +365,21 @@ io.on('connection', (socket) => {
 
     const nextPuzzle = puzzleManager.skipPuzzle(room, studentId);
     socket.emit('new_puzzle', nextPuzzle);
+  });
+
+  // STUDENT: Request current active puzzle (e.g. after refresh, round transition, or missed packet)
+  socket.on('student_request_puzzle', ({ roomId, studentId }) => {
+    const room = roomManager.getRoom(roomId);
+    if (!room || room.state !== 'racing') return;
+
+    let state = room.studentPuzzleStates[studentId];
+    if (!state) {
+      puzzleManager.initStudentPuzzle(room, studentId);
+      state = room.studentPuzzleStates[studentId];
+    }
+    if (state) {
+      socket.emit('new_puzzle', puzzleManager.getPublicPuzzlePayload(state));
+    }
   });
 
   // STUDENT: Toggle Ready for next round

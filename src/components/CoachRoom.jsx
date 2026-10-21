@@ -19,7 +19,8 @@ import {
   Clock,
   Flame,
   Volume2,
-  VolumeX
+  VolumeX,
+  LogOut
 } from 'lucide-react';
 import {
   playCountdownTick,
@@ -42,7 +43,8 @@ export default function CoachRoom({
   onRenameStudent,
   onRemoveStudent,
   onUpdateSettings,
-  onStartNextRound
+  onStartNextRound,
+  onLeaveRoom
 }) {
   const [copied, setCopied] = useState(false);
   const [editingStudentId, setEditingStudentId] = useState(null);
@@ -200,6 +202,21 @@ export default function CoachRoom({
           >
             {isMuted ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
           </button>
+
+          {/* Leave / Exit Room Button */}
+          {onLeaveRoom && (
+            <button
+              onClick={() => {
+                if (window.confirm('Do you want to exit the coach room? The room will remain active.')) {
+                  onLeaveRoom();
+                }
+              }}
+              className="p-2 rounded-xl bg-slate-800 hover:bg-rose-950/60 text-slate-400 hover:text-rose-400 transition-colors border border-slate-700"
+              title="Exit Coach Dashboard"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          )}
 
           {/* Shareable Link Box */}
           <div className="flex items-center gap-2 bg-slate-950/70 border border-slate-700/80 rounded-xl px-3 py-1.5">

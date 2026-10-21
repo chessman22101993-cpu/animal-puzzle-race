@@ -66,8 +66,15 @@ export default function App() {
         state: 'racing',
         startTime,
         endTime,
-        roundNumber
+        roundNumber: roundNumber || prev.roundNumber
       } : null);
+    });
+
+    // Active puzzle stream update
+    s.on('new_puzzle', (puzzle) => {
+      if (puzzle) {
+        setCurrentPuzzle(puzzle);
+      }
     });
 
     // Race ended
@@ -75,7 +82,7 @@ export default function App() {
       setRoom(prev => prev ? {
         ...prev,
         state: 'ended',
-        roundNumber
+        roundNumber: roundNumber || prev.roundNumber
       } : null);
       setStandings(finalStandings || []);
     });
@@ -120,11 +127,28 @@ export default function App() {
     };
   }, []);
 
-  // Check URL parameters on mount (e.g. ?room=ROOM_ID or ?coach=ROOM_ID)
+  // Check URL parameters and local session storage on mount / socket connection
   useEffect(() => {
+    if (!socket) return;
+
     const params = new URLSearchParams(window.location.search);
-    const roomParam = params.get('room');
-    const coachParam = params.get('coach');
+    let roomParam = params.get('room');
+    let coachParam = params.get('coach');
+
+    // If query string is missing, check persisted session from localStorage
+    if (!roomParam && !coachParam) {
+      const savedRole = localStorage.getItem('active_role');
+      const savedRoomId = localStorage.getItem('active_room_id');
+      if (savedRoomId) {
+        if (savedRole === 'coach') {
+          coachParam = savedRoomId;
+          window.history.replaceState(null, '', `?coach=${savedRoomId}`);
+        } else if (savedRole === 'student') {
+          roomParam = savedRoomId;
+          window.history.replaceState(null, '', `?room=${savedRoomId}`);
+        }
+      }
+    }
 
     if (coachParam) {
       const savedToken = localStorage.getItem(`coach_token_${coachParam}`);
@@ -135,8 +159,8 @@ export default function App() {
       }
     } else if (roomParam) {
       const savedStudentId = localStorage.getItem(`student_id_${roomParam}`);
-      if (savedStudentId && socket) {
-        // Attempt seamless reconnection
+      if (savedStudentId) {
+        // Attempt seamless reconnection as returning student in current round
         joinAsStudent(roomParam, '', savedStudentId);
       } else {
         setView('join');
@@ -160,6 +184,9 @@ export default function App() {
       }
 
       localStorage.setItem(`coach_token_${data.roomId}`, data.coachToken);
+      localStorage.setItem('active_role', 'coach');
+      localStorage.setItem('active_room_id', data.roomId);
+      window.history.replaceState(null, '', `?coach=${data.roomId}`);
       initCoachSession(data.roomId, data.coachToken);
     } catch (err) {
       setErrorMessage(err.message);
@@ -180,6 +207,10 @@ export default function App() {
       setStandings(roomData.standings || []);
       setView('coach');
       setIsLoading(false);
+      localStorage.setItem('active_role', 'coach');
+      localStorage.setItem('active_room_id', roomId);
+      localStorage.setItem(`coach_token_${roomId}`, token);
+      window.history.replaceState(null, '', `?coach=${roomId}`);
     });
   }
 
@@ -189,23 +220,43 @@ export default function App() {
     setIsLoading(true);
     setErrorMessage(null);
 
-    const savedId = existingStudentId || localStorage.getItem(`student_id_${roomId}`);
+    const cleanRoomId = (roomId || '').trim().toUpperCase();
+    const savedId = existingStudentId || localStorage.getItem(`student_id_${cleanRoomId}`);
 
     socket.emit('join_student_room', {
-      roomId,
+      roomId: cleanRoomId,
       name,
       studentId: savedId
     });
 
     socket.once('student_join_success', ({ student: studentData, room: roomData, currentPuzzle: puzzleData }) => {
       localStorage.setItem(`student_id_${roomData.id}`, studentData.id);
+      localStorage.setItem('active_role', 'student');
+      localStorage.setItem('active_room_id', roomData.id);
+      window.history.replaceState(null, '', `?room=${roomData.id}`);
+
       setStudent(studentData);
       setRoom(roomData);
       setStandings(roomData.standings || []);
-      setCurrentPuzzle(puzzleData);
+      if (puzzleData) {
+        setCurrentPuzzle(puzzleData);
+      }
       setView('student');
       setIsLoading(false);
     });
+  }
+
+  // Cleanly Leave Room
+  function handleLeaveRoom() {
+    localStorage.removeItem('active_role');
+    localStorage.removeItem('active_room_id');
+    window.history.replaceState(null, '', window.location.pathname);
+    setView('home');
+    setRoom(null);
+    setStudent(null);
+    setCoachToken(null);
+    setCurrentPuzzle(null);
+    setStandings([]);
   }
 
   // Coach Actions
@@ -275,6 +326,7 @@ export default function App() {
         onRemoveStudent={handleRemoveStudent}
         onUpdateSettings={handleUpdateSettings}
         onStartNextRound={handleStartNextRound}
+        onLeaveRoom={handleLeaveRoom}
       />
     );
   }
@@ -290,6 +342,7 @@ export default function App() {
         countdownRemaining={countdownRemaining}
         onSkipPuzzle={handleSkipPuzzle}
         onToggleReady={handleToggleReady}
+        onLeaveRoom={handleLeaveRoom}
       />
     );
   }
@@ -301,9 +354,30 @@ export default function App() {
       <JoinRoom
         defaultRoomId={defaultRoom}
         onJoin={(rId, name) => joinAsStudent(rId, name)}
+        onBack={() => {
+          window.history.replaceState(null, '', window.location.pathname);
+          setView('home');
+        }}
         isLoading={isLoading}
         error={errorMessage}
       />
+    );
+  }
+
+  // Connecting / Resuming Session indicator
+  if (isLoading) {
+    return (
+      <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950 text-white select-none">
+        <div className="flex flex-col items-center gap-4 p-8 rounded-3xl bg-slate-900/80 border border-amber-500/30 backdrop-blur-md shadow-2xl">
+          <div className="w-12 h-12 border-4 border-amber-400 border-t-transparent rounded-full animate-spin" />
+          <h2 className="text-xl font-black text-amber-400">
+            Resuming Race Session...
+          </h2>
+          <p className="text-xs text-slate-400">
+            Connecting and syncing current round state
+          </p>
+        </div>
+      </div>
     );
   }
 
