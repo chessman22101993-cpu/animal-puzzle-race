@@ -45,12 +45,8 @@ export default function ChessBoard({
   const [highlightSquares, setHighlightSquares] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Detect touch capability (tablets/phones)
-  const isTouchDevice = typeof window !== 'undefined' &&
-    ('ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0));
-
-  // Pointer drag tracking for tablets and touch screens
-  const pointerStartRef = useRef(null);
+  // Touch drag tracking for tablets and touch screens
+  const touchDragRef = useRef(null);
 
   // Track the authoritative pre-move position so we can instantly revert on wrong answer or timeout
   const baseFenRef = useRef(fen || DEFAULT_FEN);
@@ -102,7 +98,7 @@ export default function ChessBoard({
     }
   }, [feedbackState]);
 
-  // Tablet Watchdog: If a move was submitted but no server response after 3.5s, auto-revert
+  // Watchdog: If a move was submitted but no server response after 3.5s, auto-revert
   useEffect(() => {
     if (isSubmitting) {
       const timer = setTimeout(() => {
@@ -227,43 +223,9 @@ export default function ChessBoard({
     }
   }
 
-  // Pointer Events support for touch screens / tablets (smooth drag & drop without native HTML5 quirks)
-  function handlePointerDown(e, square) {
-    if (disabled || isSubmitting || feedbackState === 'wrong') return;
-
-    const piece = chess.get(square);
-    if (piece && piece.color === playerColor && chess.turn() === playerColor) {
-      pointerStartRef.current = { square, startX: e.clientX, startY: e.clientY };
-      selectPiece(square);
-    }
-  }
-
-  function handlePointerUp(e, square) {
-    if (!pointerStartRef.current) return;
-    const { square: fromSquare, startX, startY } = pointerStartRef.current;
-    pointerStartRef.current = null;
-
-    // Check distance dragged
-    const dist = Math.hypot(e.clientX - startX, e.clientY - startY);
-    if (dist > 15) {
-      // Find element under pointer
-      const targetEl = document.elementFromPoint(e.clientX, e.clientY);
-      const targetSquareDiv = targetEl ? targetEl.closest('[data-square]') : null;
-      const targetSquare = targetSquareDiv ? targetSquareDiv.getAttribute('data-square') : null;
-
-      if (targetSquare && targetSquare !== fromSquare) {
-        const isLegal = legalMoves.some(m => m.to === targetSquare);
-        if (isLegal) {
-          attemptMove(fromSquare, targetSquare);
-          return;
-        }
-      }
-    }
-  }
-
-  // Desktop HTML5 Drag and Drop handlers (only for desktop mouse users)
+  // Desktop Drag and Drop handlers (HTML5 native)
   function handleDragStart(e, square) {
-    if (isTouchDevice || disabled || isSubmitting || feedbackState === 'wrong' || chess.turn() !== playerColor) {
+    if (disabled || isSubmitting || feedbackState === 'wrong' || chess.turn() !== playerColor) {
       e.preventDefault();
       return;
     }
@@ -281,21 +243,59 @@ export default function ChessBoard({
   }
 
   function handleDragOver(e) {
-    if (!isTouchDevice) {
-      e.preventDefault();
-      if (e.dataTransfer) {
-        e.dataTransfer.dropEffect = 'move';
-      }
+    e.preventDefault();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'move';
     }
   }
 
   function handleDrop(e, targetSquare) {
-    if (isTouchDevice) return;
     e.preventDefault();
     if (e.dataTransfer) {
       const sourceSquare = e.dataTransfer.getData('text/plain');
       if (sourceSquare && sourceSquare !== targetSquare) {
         attemptMove(sourceSquare, targetSquare);
+      }
+    }
+  }
+
+  // Touch handlers for tablet drag-and-drop
+  function handleTouchStart(e, square) {
+    if (disabled || isSubmitting || feedbackState === 'wrong') return;
+    const piece = chess.get(square);
+    if (piece && piece.color === playerColor && chess.turn() === playerColor) {
+      const touch = e.touches[0];
+      touchDragRef.current = {
+        fromSquare: square,
+        startX: touch.clientX,
+        startY: touch.clientY,
+        currentX: touch.clientX,
+        currentY: touch.clientY
+      };
+      selectPiece(square);
+    }
+  }
+
+  function handleTouchMove(e) {
+    if (!touchDragRef.current) return;
+    const touch = e.touches[0];
+    touchDragRef.current.currentX = touch.clientX;
+    touchDragRef.current.currentY = touch.clientY;
+  }
+
+  function handleTouchEnd(e) {
+    if (!touchDragRef.current) return;
+    const { fromSquare, startX, startY, currentX, currentY } = touchDragRef.current;
+    touchDragRef.current = null;
+
+    const dist = Math.hypot(currentX - startX, currentY - startY);
+    // If dragged with touch more than 15px, attempt drop move on destination square
+    if (dist > 15) {
+      const el = document.elementFromPoint(currentX, currentY);
+      const targetDiv = el ? el.closest('[data-square]') : null;
+      const targetSquare = targetDiv ? targetDiv.getAttribute('data-square') : null;
+      if (targetSquare && targetSquare !== fromSquare) {
+        attemptMove(fromSquare, targetSquare);
       }
     }
   }
@@ -324,7 +324,7 @@ export default function ChessBoard({
     <div className="flex flex-col items-center w-full max-w-[600px] select-none mx-auto relative">
       {/* Board Container */}
       <div
-        className={`relative w-full aspect-square rounded-2xl overflow-hidden shadow-2xl transition-all duration-150 touch-manipulation ${feedbackClass}`}
+        className={`relative w-full aspect-square rounded-2xl overflow-hidden shadow-2xl transition-all duration-150 ${feedbackClass}`}
         style={{
           boxShadow: '0 15px 35px -5px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,0,0,0.3)',
           WebkitTouchCallout: 'none',
@@ -362,11 +362,12 @@ export default function ChessBoard({
                     key={square}
                     data-square={square}
                     onClick={() => handleSquareClick(square)}
-                    onPointerDown={(e) => handlePointerDown(e, square)}
-                    onPointerUp={(e) => handlePointerUp(e, square)}
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, square)}
-                    className="relative flex items-center justify-center cursor-pointer transition-colors duration-75 select-none touch-manipulation"
+                    onTouchStart={(e) => handleTouchStart(e, square)}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                    className="relative flex items-center justify-center cursor-pointer transition-colors duration-75 select-none"
                     style={{
                       backgroundColor: bgColor,
                       WebkitTouchCallout: 'none',
@@ -401,16 +402,14 @@ export default function ChessBoard({
                       <div className="absolute inset-1 rounded-full border-4 border-slate-900/35 pointer-events-none animate-fade-in" />
                     )}
 
-                    {/* Chess Piece SVG */}
+                    {/* Chess Piece SVG - Draggable with native mouse drag */}
                     {piece && (
                       <img
                         src={PIECE_IMAGES[`${piece.color}${piece.type}`]}
                         alt={`${piece.color} ${piece.type}`}
-                        draggable={!isTouchDevice && !disabled && !isSubmitting && feedbackState !== 'wrong' && chess.turn() === playerColor && piece.color === playerColor}
+                        draggable={!disabled && !isSubmitting && feedbackState !== 'wrong' && chess.turn() === playerColor && piece.color === playerColor}
                         onDragStart={(e) => handleDragStart(e, square)}
-                        className={`w-[88%] h-[88%] object-contain select-none transition-transform ${
-                          isTouchDevice ? 'pointer-events-none' : 'pointer-events-auto'
-                        } ${
+                        className={`w-[88%] h-[88%] object-contain select-none pointer-events-auto transition-transform ${
                           disabled || isSubmitting || feedbackState === 'wrong'
                             ? 'cursor-not-allowed opacity-95'
                             : 'cursor-grab active:cursor-grabbing hover:scale-105 active:scale-95'
@@ -433,7 +432,7 @@ export default function ChessBoard({
       <div className="w-full flex items-center justify-between mt-2 px-1 text-[11px] text-slate-400">
         <span className="flex items-center gap-1">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-          {isTouchDevice ? 'Tap piece then target square to move' : 'Click or drag pieces to move'}
+          Drag or click pieces to move
         </span>
         <button
           onClick={handleForceReset}
